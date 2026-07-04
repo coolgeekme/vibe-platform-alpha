@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --vibe-accent: #00ff88;
+    --vibe-purple: #a855f7;
+    --vibe-cyan: #06b6d4;
+  }
+
+  body {
+    @apply bg-vibe-bg text-vibe-text font-mono antialiased;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1e1e2e #0a0a0f;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0a0a0f;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e1e2e;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2e2e3e;
+  }
+}
+
+@layer components {
+  .glow-border {
+    @apply border border-vibe-accent/20;
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.1), inset 0 0 5px rgba(0, 255, 136, 0.05);
+  }
+
+  .panel {
+    @apply bg-vibe-surface border border-vibe-border rounded-lg;
+  }
+
+  .terminal-line {
+    @apply text-xs leading-5 text-vibe-text/80 font-mono;
+  }
+
+  .file-item {
+    @apply flex items-center gap-2 px-3 py-1.5 text-xs text-vibe-muted hover:text-vibe-text hover:bg-vibe-border/50 rounded cursor-pointer transition-colors;
+  }
+
+  .agent-badge {
+    @apply px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full;
+  }
+}
