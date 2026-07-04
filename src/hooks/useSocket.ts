@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 
 const DEFAULT_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000'
 
@@ -23,10 +23,11 @@ export function useSocket(options: UseSocketOptions = {}) {
   const [connected, setConnected] = useState(false)
   const [messages, setMessages] = useState<SocketMessage[]>([])
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (socketRef.current?.connected) return
 
     console.log('Connecting to socket at:', url)
+    const { io } = await import('socket.io-client')
     const socket = io(url, {
       transports: ['websocket'],
       reconnection: true,
