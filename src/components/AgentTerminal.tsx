@@ -5,86 +5,39 @@ import {
   Terminal,
   Send,
   Trash2,
-  Circle,
   Wifi,
   WifiOff,
 } from 'lucide-react'
-
-interface TerminalLine {
-  id: number
-  type: 'input' | 'output' | 'error' | 'system'
-  content: string
-  timestamp: Date
-}
+import { useSocket, SocketMessage } from '@/hooks/useSocket'
 
 export default function AgentTerminal() {
-  const [lines, setLines] = useState<TerminalLine[]>([
-    {
-      id: 1,
-      type: 'system',
-      content: '▸ Vibe Agent Terminal v0.1.0',
-      timestamp: new Date(),
-    },
-    {
-      id: 2,
-      type: 'system',
-      content: '▸ Waiting for WebSocket connection to ws://localhost:4000...',
-      timestamp: new Date(),
-    },
-    {
-      id: 3,
-      type: 'output',
-      content: '  Ready. Type a command or prompt to send to the active agent.',
-      timestamp: new Date(),
-    },
-  ])
+  const { connected, messages, sendCommand, clearMessages, connect } = useSocket({ autoConnect: true })
   const [input, setInput] = useState('')
-  const [connected, setConnected] = useState(false)
+  const [activeAgent, setActiveAgent] = useState<'claude' | 'codex'>('claude')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [lines])
+  }, [messages])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
 
-    const newLine: TerminalLine = {
-      id: Date.now(),
-      type: 'input',
-      content: `$ ${input}`,
-      timestamp: new Date(),
+    const success = sendCommand(input, activeAgent)
+    
+    if (!success) {
+      // Manual error if not connected
+      console.error('Failed to send command: Socket not connected')
     }
-
-    const responseLine: TerminalLine = {
-      id: Date.now() + 1,
-      type: 'output',
-      content: `[agent] Processing: "${input}" \u2014 WebSocket not connected.`,
-      timestamp: new Date(),
-    }
-
-    setLines((prev) => [...prev, newLine, responseLine])
+    
     setInput('')
   }
 
-  const clearTerminal = () => {
-    setLines([
-      {
-        id: Date.now(),
-        type: 'system',
-        content: '▸ Terminal cleared.',
-        timestamp: new Date(),
-      },
-    ])
-  }
-
-  const getLineColor = (type: TerminalLine['type']) => {
+  const getLineColor = (type: SocketMessage['type']) => {
     switch (type) {
-      case 'input':
-        return 'text-vibe-accent'
       case 'output':
         return 'text-vibe-text/70'
       case 'error':
@@ -113,28 +66,23 @@ export default function AgentTerminal() {
               <>
                 <WifiOff className="w-3 h-3 text-vibe-muted" />
                 <span className="text-[10px] text-vibe-muted">Disconnected</span>
+                <button 
+                  onClick={connect}
+                  className="ml-2 text-[9px] underline text-vibe-accent hover:text-white"
+                >
+                  Retry
+                </button>
               </>
             )}
           </div>
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={clearTerminal}
+            onClick={clearMessages}
             className="p-1 hover:bg-vibe-border rounded transition-colors text-vibe-muted hover:text-vibe-text"
             title="Clear terminal"
           >
             <Trash2 className="w-3 h-3" />
-          </button>
-          <button
-            onClick={() => setConnected(!connected)}
-            className={`p-1 rounded transition-colors ${
-              connected
-                ? 'hover:bg-red-500/10 text-vibe-accent hover:text-red-400'
-                : 'hover:bg-vibe-accent/10 text-vibe-muted hover:text-vibe-accent'
-            }`}
-            title={connected ? 'Disconnect' : 'Connect'}
-          >
-            <Circle className="w-3 h-3" />
           </button>
         </div>
       </div>
@@ -142,13 +90,21 @@ export default function AgentTerminal() {
       {/* Terminal Output */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-2 font-mono"
+        className="flex-1 overflow-y-auto px-4 py-2 font-mono text-[12px] leading-relaxed"
       >
-        {lines.map((line) => (
+        {messages.length === 0 && !connected && (
+          <div className="text-vibe-muted italic py-2">
+            Connecting to Agent Brain at {process.env.NEXT_PUBLIC_SOCKET_URL || 'localhost:4000'}...
+          </div>
+        )}
+        {messages.map((line, i) => (
           <div
-            key={line.id}
-            className={`terminal-line ${getLineColor(line.type)}`}
+            key={i}
+            className={`terminal-line mb-1 ${getLineColor(line.type)}`}
           >
+            {line.agent && (
+              <span className="text-[10px] opacity-50 mr-2">[{line.agent}]</span>
+            )}
             {line.content}
           </div>
         ))}
@@ -164,16 +120,17 @@ export default function AgentTerminal() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Send command to agent..."
-          className="flex-1 bg-transparent text-xs text-vibe-text placeholder:text-vibe-muted/50 outline-none"
+          placeholder={connected ? "Send command to agent..." : "Waiting for connection..."}
+          disabled={!connected}
+          className="flex-1 bg-transparent text-xs text-vibe-text placeholder:text-vibe-muted/50 outline-none disabled:opacity-50"
         />
         <button
           type="submit"
-          className="p-1.5 hover:bg-vibe-accent/10 rounded transition-colors text-vibe-muted hover:text-vibe-accent"
+          disabled={!connected || !input.trim()}
+          className="p-1.5 hover:bg-vibe-accent/10 rounded transition-colors text-vibe-muted hover:text-vibe-accent disabled:opacity-30"
         >
           <Send className="w-3.5 h-3.5" />
         </button>
       </form>
     </div>
   )
-}

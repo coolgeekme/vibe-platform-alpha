@@ -3,20 +3,22 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 
+const DEFAULT_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000'
+
 interface UseSocketOptions {
   url?: string
   autoConnect?: boolean
 }
 
-interface SocketMessage {
-  type: 'output' | 'error' | 'status'
-  data: string
+export interface SocketMessage {
+  type: 'output' | 'error' | 'system'
+  content: string
   agent?: 'claude' | 'codex'
-  timestamp: number
+  timestamp: Date
 }
 
 export function useSocket(options: UseSocketOptions = {}) {
-  const { url = 'http://localhost:4000', autoConnect = false } = options
+  const { url = DEFAULT_URL, autoConnect = true } = options
   const socketRef = useRef<Socket | null>(null)
   const [connected, setConnected] = useState(false)
   const [messages, setMessages] = useState<SocketMessage[]>([])
@@ -24,26 +26,59 @@ export function useSocket(options: UseSocketOptions = {}) {
   const connect = useCallback(() => {
     if (socketRef.current?.connected) return
 
+    console.log('Connecting to socket at:', url)
     const socket = io(url, {
       transports: ['websocket'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 2000,
     })
 
-    socket.on('connect', () => setConnected(true))
-    socket.on('disconnect', () => setConnected(false))
-
-    socket.on('agent:output', (msg: SocketMessage) => {
-      setMessages((prev) => [...prev, msg])
+    socket.on('connect', () => {
+      console.log('Socket connected')
+      setConnected(true)
+      setMessages(prev => [...prev, {
+        type: 'system',
+        content: `▸ Connected to Agent Brain at ${url}`,
+        timestamp: new Date()
+      }])
     })
 
-    socket.on('agent:error', (msg: SocketMessage) => {
-      setMessages((prev) => [...prev, { ...msg, type: 'error' }])
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected')
+      setConnected(false)
+      setMessages(prev => [...prev, {
+        type: 'system',
+        content: '▸ Disconnected from Agent Brain.',
+        timestamp: new Date()
+      }])
     })
 
-    socket.on('agent:status', (msg: SocketMessage) => {
-      setMessages((prev) => [...prev, { ...msg, type: 'status' }])
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err)
+      setMessages(prev => [...prev, {
+        type: 'error',
+        content: `▸ Connection error: ${err.message}. Ensure port 4000 is open.`,
+        timestamp: new Date()
+      }])
+    })
+
+    socket.on('agent:output', (msg: any) => {
+      setMessages((prev) => [...prev, {
+        type: 'output',
+        content: msg.data || msg.content,
+        agent: msg.agent,
+        timestamp: new Date(msg.timestamp || Date.now())
+      }])
+    })
+
+    socket.on('agent:error', (msg: any) => {
+      setMessages((prev) => [...prev, {
+        type: 'error',
+        content: msg.data || msg.content,
+        agent: msg.agent,
+        timestamp: new Date(msg.timestamp || Date.now())
+      }])
     })
 
     socketRef.current = socket
@@ -61,6 +96,10 @@ export function useSocket(options: UseSocketOptions = {}) {
     return true
   }, [])
 
+  const clearMessages = useCallback(() => {
+    setMessages([])
+  }, [])
+
   useEffect(() => {
     if (autoConnect) connect()
     return () => { disconnect() }
@@ -72,5 +111,6 @@ export function useSocket(options: UseSocketOptions = {}) {
     connect,
     disconnect,
     sendCommand,
+    clearMessages
   }
 }
