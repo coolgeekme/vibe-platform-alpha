@@ -6,9 +6,12 @@ import VisualEditor from './VisualEditor'
 import AgentTerminal from './AgentTerminal'
 import { GripHorizontal } from 'lucide-react'
 
+export type AgentType = 'claude' | 'codex'
+
 export default function Dashboard() {
   const [terminalHeight, setTerminalHeight] = useState(240)
   const [sidebarWidth] = useState(280)
+  const [activeAgent, setActiveAgent] = useState<AgentType>('claude')
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-vibe-bg">
@@ -17,7 +20,7 @@ export default function Dashboard() {
         className="h-full flex-shrink-0 border-r border-vibe-border"
         style={{ width: sidebarWidth }}
       >
-        <Sidebar />
+        <Sidebar activeAgent={activeAgent} setActiveAgent={setActiveAgent} />
       </div>
 
       {/* Main Content Area */}
@@ -37,7 +40,7 @@ export default function Dashboard() {
           className="flex-shrink-0 border-t border-vibe-border"
           style={{ height: terminalHeight }}
         >
-          <AgentTerminal />
+          <AgentTerminal activeAgent={activeAgent} />
         </div>
       </div>
     </div>

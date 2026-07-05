@@ -14,8 +14,7 @@ import {
   Plus,
   Search,
 } from 'lucide-react'
-
-type AgentType = 'claude' | 'codex'
+import { AgentType } from './Dashboard'
 
 interface FileNode {
   name: string
@@ -114,9 +113,12 @@ function FileTreeItem({ node, depth = 0 }: { node: FileNode; depth?: number }) {
   )
 }
 
-export default function Sidebar() {
-  const [activeAgent, setActiveAgent] = useState<AgentType>('claude')
+interface SidebarProps {
+  activeAgent: AgentType
+  setActiveAgent: (agent: AgentType) => void
+}
 
+export default function Sidebar({ activeAgent, setActiveAgent }: SidebarProps) {
   return (
     <div className="flex flex-col h-full bg-vibe-surface">
       {/* Header */}

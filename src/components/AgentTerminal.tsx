@@ -9,11 +9,15 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { useSocket, SocketMessage } from '@/hooks/useSocket'
+import { AgentType } from './Dashboard'
 
-export default function AgentTerminal() {
+interface AgentTerminalProps {
+  activeAgent: AgentType
+}
+
+export default function AgentTerminal({ activeAgent }: AgentTerminalProps) {
   const { connected, messages, sendCommand, clearMessages, connect } = useSocket({ autoConnect: true })
   const [input, setInput] = useState('')
-  const [activeAgent, setActiveAgent] = useState<'claude' | 'codex'>('claude')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
