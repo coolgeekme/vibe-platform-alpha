@@ -1,14 +1,13 @@
 const { spawn } = require('child_process');
 
 /**
- * Agent configuration \u2014 maps agent names to CLI binaries.
- * In production, these would be the actual `claude` and `codex` CLI tools.
+ * Agent configuration — maps agent names to CLI binaries.
  */
 const AGENT_CONFIG = {
   claude: {
     binary: 'claude',
     args: ['--print'],
-    env: { CLAUDE_API_KEY: process.env.CLAUDE_API_KEY || '' },
+    env: { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '' },
   },
   codex: {
     binary: 'codex',
@@ -38,40 +37,31 @@ function spawnAgent(agentName, command, onChunk) {
 
     which.on('close', (code) => {
       if (code !== 0) {
-        // Binary not found \u2014 simulate output for development
-        onChunk(`[dev-mode] ${agentName} binary not found. Simulating response...`);
-        
-        setTimeout(() => {
-          onChunk(`[${agentName}] Processing: "${command}"`);
-        }, 500);
-
-        setTimeout(() => {
-          onChunk(`[${agentName}] Thinking...`);
-        }, 1200);
-
-        setTimeout(() => {
-          onChunk(`[${agentName}] Done. (simulated \u2014 install '${config.binary}' CLI for real output)`);
-          resolve();
-        }, 2000);
-
-        return;
+        onChunk(`[error] ${agentName} CLI not found on this system. Please install '${config.binary}'.`);
+        return reject(new Error(`${agentName} binary not found`));
       }
 
-      // Binary exists \u2014 spawn the real process
+      // Binary exists — spawn the real process
       const proc = spawn(config.binary, [...config.args, command], {
         env: { ...process.env, ...config.env },
         shell: true,
       });
 
+      let output = '';
+
       proc.stdout.on('data', (data) => {
         const text = data.toString();
+        output += text;
         text.split('\n').filter(Boolean).forEach((line) => {
           onChunk(line);
         });
       });
 
       proc.stderr.on('data', (data) => {
-        onChunk(`[stderr] ${data.toString().trim()}`);
+        const errText = data.toString().trim();
+        if (errText) {
+          onChunk(`[stderr] ${errText}`);
+        }
       });
 
       proc.on('close', (exitCode) => {
