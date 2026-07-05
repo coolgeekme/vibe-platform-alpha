@@ -29,7 +29,6 @@ export default function AgentTerminal() {
     const success = sendCommand(input, activeAgent)
     
     if (!success) {
-      // Manual error if not connected
       console.error('Failed to send command: Socket not connected')
     }
     
@@ -44,12 +43,13 @@ export default function AgentTerminal() {
         return 'text-red-400'
       case 'system':
         return 'text-vibe-purple'
+      default:
+        return 'text-vibe-text'
     }
   }
 
   return (
     <div className="flex flex-col h-full bg-vibe-surface">
-      {/* Terminal Header */}
       <div className="flex items-center justify-between px-4 py-1.5 border-b border-vibe-border bg-vibe-surface">
         <div className="flex items-center gap-2">
           <Terminal className="w-3.5 h-3.5 text-vibe-accent" />
@@ -87,7 +87,6 @@ export default function AgentTerminal() {
         </div>
       </div>
 
-      {/* Terminal Output */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-2 font-mono text-[12px] leading-relaxed"
@@ -110,7 +109,6 @@ export default function AgentTerminal() {
         ))}
       </div>
 
-      {/* Input */}
       <form
         onSubmit={handleSubmit}
         className="flex items-center gap-2 px-4 py-2 border-t border-vibe-border"
@@ -134,3 +132,4 @@ export default function AgentTerminal() {
       </form>
     </div>
   )
+}
