@@ -8,7 +8,9 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^4.19.0",
+    "openai": "^6.45.0",
     "socket.io": "^4.7.0"
   }
 }
