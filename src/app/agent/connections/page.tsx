@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   ChevronLeft, 
   ExternalLink, 
@@ -14,7 +14,9 @@ import {
   MessageCircle,
   Linkedin,
   Database,
-  Plus
+  Plus,
+  User,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -27,6 +29,12 @@ interface Integration {
   description: string
   icon: any
   color: string
+}
+
+interface ConnectedAccount {
+  id: string | null
+  name: string
+  status: string
 }
 
 const INTEGRATIONS: Integration[] = [
@@ -83,6 +91,26 @@ const INTEGRATIONS: Integration[] = [
 
 export default function ConnectionsPage() {
   const [connecting, setConnecting] = useState<string | null>(null)
+  const [connectedAccounts, setConnectedAccounts] = useState<Record<string, ConnectedAccount[]>>({})
+  const [loadingConnections, setLoadingConnections] = useState(true)
+
+  const fetchConnectedAccounts = async () => {
+    try {
+      const response = await fetch(`${AGENT_URL}/integrations/connected`)
+      if (response.ok) {
+        const data = await response.json()
+        setConnectedAccounts(data.connected || {})
+      }
+    } catch (err) {
+      console.error('Failed to fetch connected accounts:', err)
+    } finally {
+      setLoadingConnections(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchConnectedAccounts()
+  }, [])
 
   const handleConnect = async (appId: string) => {
     setConnecting(appId)
@@ -102,6 +130,15 @@ export default function ConnectionsPage() {
     }
   }
 
+  const getAppAccounts = (appId: string): ConnectedAccount[] => {
+    return connectedAccounts[appId] || []
+  }
+
+  const isConnected = (appId: string): boolean => {
+    const accounts = getAppAccounts(appId)
+    return accounts.some(a => a.status === 'ACTIVE' || a.status === 'CONNECTED')
+  }
+
   return (
     <div className="flex flex-col h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans bg-dot-grid">
       {/* Header */}
@@ -117,6 +154,13 @@ export default function ConnectionsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+           <button
+             onClick={() => { setLoadingConnections(true); fetchConnectedAccounts(); }}
+             className="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-zinc-100"
+             title="Refresh connections"
+           >
+             <RefreshCw className={`w-4 h-4 ${loadingConnections ? 'animate-spin' : ''}`} />
+           </button>
            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter mr-2 flex items-center gap-1.5">
              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
              Secured by Composio
@@ -136,41 +180,85 @@ export default function ConnectionsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {INTEGRATIONS.map((app, index) => (
-              <motion.div
-                key={app.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="group relative flex flex-col p-6 rounded-3xl bg-zinc-900/50 border border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900 transition-all shadow-xl backdrop-blur-sm ring-1 ring-white/5"
-              >
-                <div className={`w-12 h-12 rounded-2xl ${app.color} flex items-center justify-center border mb-6 shadow-lg`}>
-                  <app.icon className="w-6 h-6" />
-                </div>
+            {INTEGRATIONS.map((app, index) => {
+              const accounts = getAppAccounts(app.id)
+              const connected = isConnected(app.id)
 
-                <div className="flex-1 space-y-2 mb-8">
-                  <h3 className="text-lg font-bold text-white tracking-tight">{app.name}</h3>
-                  <p className="text-sm text-zinc-500 leading-relaxed font-medium">
-                    {app.description}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleConnect(app.id)}
-                  disabled={connecting === app.id}
-                  className="w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-zinc-100 text-black text-xs font-black uppercase tracking-widest hover:bg-white transition-all transform active:scale-95 disabled:opacity-50 shadow-md"
+              return (
+                <motion.div
+                  key={app.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`group relative flex flex-col p-6 rounded-3xl bg-zinc-900/50 border ${connected ? 'border-emerald-500/30 ring-1 ring-emerald-500/10' : 'border-zinc-800/80'} hover:border-zinc-700 hover:bg-zinc-900 transition-all shadow-xl backdrop-blur-sm`}
                 >
-                  {connecting === app.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Connect {app.name}</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </>
+                  {/* Connected badge */}
+                  {connected && (
+                    <div className="absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Active</span>
+                    </div>
                   )}
-                </button>
-              </motion.div>
-            ))}
+
+                  <div className={`w-12 h-12 rounded-2xl ${app.color} flex items-center justify-center border mb-4 shadow-lg`}>
+                    <app.icon className="w-6 h-6" />
+                  </div>
+
+                  <div className="flex-1 space-y-2 mb-4">
+                    <h3 className="text-lg font-bold text-white tracking-tight">{app.name}</h3>
+                    <p className="text-sm text-zinc-500 leading-relaxed font-medium">
+                      {app.description}
+                    </p>
+                  </div>
+
+                  {/* Connected accounts list */}
+                  {accounts.length > 0 && (
+                    <div className="mb-4 space-y-1.5">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                        Connected Accounts ({accounts.length})
+                      </p>
+                      {accounts.map((account, idx) => (
+                        <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+                          <User className="w-3 h-3 text-zinc-400 flex-shrink-0" />
+                          <span className="text-xs text-zinc-300 font-medium truncate">{account.name}</span>
+                          <span className={`ml-auto text-[9px] font-bold uppercase tracking-wider ${
+                            account.status === 'ACTIVE' || account.status === 'CONNECTED' 
+                              ? 'text-emerald-400' 
+                              : 'text-amber-400'
+                          }`}>
+                            {account.status === 'ACTIVE' || account.status === 'CONNECTED' ? '●' : '○'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => handleConnect(app.id)}
+                    disabled={connecting === app.id}
+                    className={`w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all transform active:scale-95 disabled:opacity-50 shadow-md ${
+                      connected
+                        ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-zinc-700'
+                        : 'bg-zinc-100 text-black hover:bg-white'
+                    }`}
+                  >
+                    {connecting === app.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : connected ? (
+                      <>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Another Account</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Connect {app.name}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </motion.div>
+              )
+            })}
           </div>
 
           <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-cyan-500/5 border border-indigo-500/20 text-center space-y-4">
