@@ -19,6 +19,7 @@ import {
 import ChatInterface from '@/components/agent/ChatInterface'
 import MemoryPanel from '@/components/agent/MemoryPanel'
 import ChatSidebar from '@/components/agent/ChatSidebar'
+import BrainStatus from '@/components/agent/BrainStatus'
 import { useAgentChat } from '@/hooks/useAgentChat'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -71,6 +72,7 @@ export default function AgentPage() {
                <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
                <span className="text-[11px] font-black uppercase tracking-wider text-cyan-400">Wingman</span>
             </div>
+            <BrainStatus />
 
             <nav className="flex items-center gap-6">
               <button 
