@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Send,
   Square,
@@ -279,10 +280,10 @@ export default function ChatInterface() {
           {/* Action Row */}
           <div className="flex items-center gap-2.5 mb-5 overflow-x-auto no-scrollbar pb-1 px-2">
              {[
-               { icon: <History className="w-3.5 h-3.5" />, label: "Check Ian's sports schedule" },
-               { icon: <Bot className="w-3.5 h-3.5" />, label: "Draft email about PBCoach app" },
-               { icon: <Calendar className="w-3.5 h-3.5" />, label: "What is my agenda for today?" },
-               { icon: <LayoutGrid className="w-3.5 h-3.5" />, label: "Summarize my recent GitHub PRs" },
+               { icon: <History className="w-3.5 h-3.5" />, label: 'Check Ian\'s sports schedule' },
+               { icon: <Bot className="w-3.5 h-3.5" />, label: 'Draft email about PBCoach app' },
+               { icon: <Calendar className="w-3.5 h-3.5" />, label: 'What is my agenda for today?' },
+               { icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Summarize my recent GitHub PRs' },
              ].map((s, i) => (
                <button
                  key={i}
@@ -312,7 +313,7 @@ export default function ChatInterface() {
                   <span className="text-[11px] font-black text-zinc-100 tracking-tight italic opacity-90">Let Wingman run apps for you</span>
                </div>
                <div className="flex items-center gap-4">
-                  <button className="px-4 py-1.5 rounded-full bg-zinc-100 text-black text-[10px] font-black uppercase tracking-[0.1em] hover:bg-white transition-all transform active:scale-95 shadow-md">Connect</button>
+                  <Link href="/agent/connections" className="px-4 py-1.5 rounded-full bg-zinc-100 text-black text-[10px] font-black uppercase tracking-[0.1em] hover:bg-white transition-all transform active:scale-95 shadow-md flex items-center justify-center">Connect</Link>
                   <X className="w-4 h-4 text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors" />
                </div>
             </div>
