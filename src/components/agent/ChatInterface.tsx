@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
 import {
   Send,
   Square,
   Bot,
   User,
   ChevronRight,
+  ChevronDown,
   ArrowDown,
   Copy,
   Check,
@@ -24,9 +24,11 @@ import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useAgentChat, ChatMessage } from '@/hooks/useAgentChat'
+import ToolExecutionCard from './ToolExecutionCard'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -73,6 +75,7 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
   const isSystem = message.role === 'system'
+  const [toolsExpanded, setToolsExpanded] = useState(false)
 
   if (isSystem) {
     return (
@@ -94,24 +97,44 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     >
       <div className={cn("flex items-start gap-4 w-full", isUser ? "flex-row-reverse" : "flex-row")}>
         {!isUser && (
-           <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center mt-1">
+           <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(34,211,238,0.1)]">
               <Bot className="w-4 h-4 text-cyan-400" />
            </div>
         )}
         
         <div className={cn("flex-1 min-w-0", isUser ? "flex flex-col items-end" : "flex flex-col items-start")}>
           {isUser ? (
-             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 shadow-sm max-w-[90%]">
+             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 shadow-sm max-w-[90%] ring-1 ring-white/5">
                 <p className="text-[15px] text-zinc-100 leading-relaxed font-medium">{message.content}</p>
              </div>
           ) : (
             <div className="w-full space-y-4">
               {message.toolCalls && message.toolCalls.length > 0 && (
-                <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer group">
-                   <div className="flex items-center gap-1 bg-zinc-900/50 px-2.5 py-1 rounded-full border border-zinc-800/50">
-                      <span>Used {message.toolCalls.length} tools</span>
-                      <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                   </div>
+                <div className="space-y-3">
+                  <button 
+                    onClick={() => setToolsExpanded(!toolsExpanded)}
+                    className="flex items-center gap-2 text-[11px] font-bold text-zinc-500 hover:text-zinc-300 transition-colors group"
+                  >
+                     <div className="flex items-center gap-1.5 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-zinc-800/50 hover:bg-zinc-900 transition-all">
+                        <span className="opacity-80">Used {message.toolCalls.length} tools</span>
+                        {toolsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />}
+                     </div>
+                  </button>
+
+                  <AnimatePresence>
+                    {toolsExpanded && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden space-y-2"
+                      >
+                        {message.toolCalls.map(tc => (
+                          <ToolExecutionCard key={tc.id} toolCall={tc} />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 
@@ -235,11 +258,11 @@ export default function ChatInterface() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto no-scrollbar scroll-smooth"
+        className="flex-1 overflow-y-auto no-scrollbar scroll-smooth pt-4"
       >
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center min-h-[60%] text-center px-4">
-             <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-8 shadow-2xl">
+          <div className="flex flex-col items-center justify-center min-h-[70%] text-center px-4">
+             <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-8 shadow-2xl ring-1 ring-white/5">
                 <Bot className="w-10 h-10 text-zinc-700" />
              </div>
              <h2 className="text-3xl font-black tracking-tighter text-white mb-3">Vibe Platform Alpha</h2>
@@ -250,13 +273,15 @@ export default function ChatInterface() {
         )}
 
         <div className="w-full pb-80">
-          <div className="flex justify-center my-10">
-             <span className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.3em] px-4 py-1.5 bg-zinc-900/40 rounded-full border border-zinc-800/30 backdrop-blur-sm">System Ready</span>
+          <div className="flex justify-center mb-10">
+             <span className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.3em] px-4 py-1.5 bg-zinc-900/40 rounded-full border border-zinc-800/30 backdrop-blur-sm shadow-sm ring-1 ring-white/5">System Ready</span>
           </div>
 
-          {messages.map(msg => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
+          <AnimatePresence initial={false}>
+            {messages.map(msg => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))}
+          </AnimatePresence>
         </div>
 
         <AnimatePresence>
@@ -288,7 +313,7 @@ export default function ChatInterface() {
                <button
                  key={i}
                  onClick={() => sendMessage(s.label)}
-                 className="flex-shrink-0 flex items-center gap-2.5 px-4 py-2 rounded-full bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-600 hover:bg-zinc-800 transition-all backdrop-blur-md shadow-sm"
+                 className="flex-shrink-0 flex items-center gap-2.5 px-4 py-2 rounded-full bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-600 hover:bg-zinc-800 transition-all backdrop-blur-md shadow-sm ring-1 ring-white/5"
                >
                  <span className="text-zinc-500">{s.icon}</span>
                  <span className="text-[11px] font-bold text-zinc-400 whitespace-nowrap tracking-tight">{s.label}</span>
@@ -313,7 +338,7 @@ export default function ChatInterface() {
                   <span className="text-[11px] font-black text-zinc-100 tracking-tight italic opacity-90">Let Wingman run apps for you</span>
                </div>
                <div className="flex items-center gap-4">
-                  <Link href="/agent/connections" className="px-4 py-1.5 rounded-full bg-zinc-100 text-black text-[10px] font-black uppercase tracking-[0.1em] hover:bg-white transition-all transform active:scale-95 shadow-md flex items-center justify-center">Connect</Link>
+                  <Link href="/agent/connections" className="px-5 py-1.5 rounded-full bg-zinc-100 text-black text-[10px] font-black uppercase tracking-[0.1em] hover:bg-white transition-all transform active:scale-95 shadow-md flex items-center justify-center">Connect</Link>
                   <X className="w-4 h-4 text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors" />
                </div>
             </div>

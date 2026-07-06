@@ -10,25 +10,35 @@ import {
   User, 
   Zap, 
   Flame,
-  LayoutGrid
+  LayoutGrid,
+  PanelRightOpen,
+  PanelRightClose
 } from 'lucide-react'
 import ChatInterface from '@/components/agent/ChatInterface'
+import MemoryPanel from '@/components/agent/MemoryPanel'
 import { motion, AnimatePresence } from 'framer-motion'
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 export default function AgentPage() {
   const [activeTab, setActiveAgent] = useState('Chat')
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   return (
     <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
       {/* Sidebar - Far Left */}
-      <div className="w-[60px] flex flex-col items-center py-4 border-r border-zinc-800 bg-zinc-950 z-30">
+      <div className="w-[60px] flex-shrink-0 flex flex-col items-center py-4 border-r border-zinc-800 bg-zinc-950 z-30">
         <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 shadow-lg overflow-hidden">
           <img src="https://avatars.githubusercontent.com/u/100000000?v=4" alt="profile" className="w-full h-full object-cover opacity-80" />
         </div>
         <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 cursor-pointer hover:bg-zinc-800 transition-colors">
           <span className="text-[10px] font-bold text-zinc-500">M</span>
         </div>
-        <div className="flex-1 flex flex-col items-center gap-4">
+        <div className="flex-1 flex flex-col items-center gap-4 pt-4">
            <button className="w-10 h-10 rounded-full border border-zinc-800/50 flex items-center justify-center text-zinc-600 hover:text-zinc-400 hover:bg-zinc-900 transition-all">
              <Plus className="w-5 h-5" />
            </button>
@@ -41,7 +51,7 @@ export default function AgentPage() {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Header */}
-        <header className="h-[56px] flex items-center justify-between px-6 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md z-20">
+        <header className="h-[56px] flex-shrink-0 flex items-center justify-between px-6 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md z-20">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-cyan-400/20 border border-cyan-400/30">
                <MessageSquare className="w-3.5 h-3.5 text-cyan-400" />
@@ -91,12 +101,29 @@ export default function AgentPage() {
         {/* Chat Area */}
         <main className="flex-1 min-h-0 relative">
           <ChatInterface />
+          
+          {/* Toggle Sidebar Button */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="absolute top-4 right-6 z-20 p-2 hover:bg-zinc-800 bg-zinc-950/50 backdrop-blur rounded-lg transition-all border border-zinc-800 text-zinc-500 hover:text-zinc-100 flex items-center justify-center shadow-lg"
+            title={sidebarOpen ? 'Collapse side panel' : 'Expand side panel'}
+          >
+            {sidebarOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          </button>
         </main>
       </div>
 
-      {/* Setup Button (Floating Right) */}
-      <div className="absolute top-[68px] right-6 z-20">
-         <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-200">
+      {/* Memory Sidebar */}
+      <div className={cn(
+        "h-full flex-shrink-0 transition-all duration-300 ease-in-out border-l border-zinc-800 overflow-hidden bg-zinc-950",
+        sidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 border-l-0"
+      )}>
+        <MemoryPanel />
+      </div>
+
+      {/* Setup Button (Floating Right) - Positioned relative to main content */}
+      <div className="absolute top-[68px] right-20 z-20 pointer-events-none">
+         <button className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-200">
             <Settings className="w-3.5 h-3.5" />
             <span className="text-[11px] font-bold uppercase tracking-wider">Setup</span>
          </button>
