@@ -126,6 +126,8 @@ export function useAgentChat() {
             content: m.content,
             tool_calls: m.toolCalls
           })),
+          local_time: new Date().toLocaleString('en-US', { timeZone: 'America/Phoenix' }),
+          timezone: 'America/Phoenix',
         }),
         signal: abortRef.current.signal,
       })
