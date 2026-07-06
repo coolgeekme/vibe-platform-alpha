@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 const AGENT_URL = 'https://agent.coolgeek.me'
 
@@ -23,15 +23,71 @@ export interface ChatMessage {
   isStreaming?: boolean
 }
 
+export interface ChatSession {
+  id: string
+  title: string
+  created_at: string
+}
+
 export function useAgentChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
+  const fetchSessions = useCallback(async () => {
+    try {
+      const res = await fetch(`${AGENT_URL}/sessions`)
+      if (!res.ok) throw new Error('Failed to fetch sessions')
+      const data = await res.json()
+      setSessions(data.sessions || [])
+    } catch (err) {
+      console.error('Session fetch error:', err)
+    }
+  }, [])
+
+  const loadSession = useCallback(async (sessionId: string) => {
+    setIsLoading(true)
+    setCurrentSessionId(sessionId)
+    try {
+      const res = await fetch(`${AGENT_URL}/sessions/${sessionId}/messages`)
+      if (!res.ok) throw new Error('Failed to fetch history')
+      const data = await res.json()
+      
+      const history = (data.messages || []).map((m: any, i: number) => ({
+        id: `hist_${i}`,
+        role: m.role,
+        content: m.content,
+        timestamp: new Date(m.timestamp),
+        toolCalls: m.tool_calls ? m.tool_calls.map((tc: any) => ({
+          ...tc,
+          status: 'completed'
+        })) : []
+      }))
+      
+      setMessages(history)
+    } catch (err) {
+      console.error('History load error:', err)
+      setMessages([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const startNewChat = useCallback(() => {
+    const newId = `chat_${Date.now()}`
+    setCurrentSessionId(newId)
+    setMessages([])
+  }, [])
+
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return
+
+    const sessionId = currentSessionId || `chat_${Date.now()}`
+    if (!currentSessionId) setCurrentSessionId(sessionId)
 
     const userMessage: ChatMessage = {
       id: generateId(),
@@ -40,8 +96,8 @@ export function useAgentChat() {
       timestamp: new Date(),
     }
 
-    const currentMessages = [...messages, userMessage]
-    setMessages(currentMessages)
+    const prevMessages = [...messages]
+    setMessages(prev => [...prev, userMessage])
     setIsLoading(true)
 
     const assistantId = generateId()
@@ -64,145 +120,44 @@ export function useAgentChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: content.trim(),
-          history: currentMessages.slice(0, -1).map(m => ({ 
+          session_id: sessionId,
+          history: prevMessages.map(m => ({ 
             role: m.role, 
-            content: m.content 
+            content: m.content,
+            tool_calls: m.toolCalls
           })),
         }),
         signal: abortRef.current.signal,
       })
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`)
-      }
-
-      const contentType = response.headers.get('content-type') || ''
-
-      if (contentType.includes('text/event-stream') || contentType.includes('stream')) {
-        const reader = response.body?.getReader()
-        const decoder = new TextDecoder()
-
-        if (reader) {
-          let fullContent = ''
-          let activeToolCalls: ToolCall[] = []
-
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            const chunk = decoder.decode(value, { stream: true })
-            const lines = chunk.split('\n')
-
-            for (const line of lines) {
-              const cleanLine = line.trim()
-              if (!cleanLine.startsWith('data: ')) continue
-              
-              const data = cleanLine.slice(6)
-              if (data === '[DONE]') break
-
-              try {
-                const parsed = JSON.parse(data)
-
-                if (parsed.type === 'content' || parsed.type === 'text' || parsed.content) {
-                  fullContent += parsed.content || parsed.text || ''
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantId
-                        ? { ...m, content: fullContent }
-                        : m
-                    )
-                  )
-                } else if (parsed.type === 'tool_call') {
-                  const newToolCall: ToolCall = {
-                    id: parsed.id || `tool_${Date.now()}`,
-                    name: parsed.name || parsed.tool,
-                    arguments: typeof parsed.arguments === 'string'
-                      ? parsed.arguments
-                      : JSON.stringify(parsed.arguments, null, 2),
-                    status: 'running',
-                  }
-                  activeToolCalls = [...activeToolCalls, newToolCall]
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantId
-                        ? { ...m, toolCalls: [...activeToolCalls] }
-                        : m
-                    )
-                  )
-                } else if (parsed.type === 'tool_result') {
-                  activeToolCalls = activeToolCalls.map(tc =>
-                    tc.id === parsed.id || tc.name === parsed.name
-                      ? {
-                          ...tc,
-                          result: typeof parsed.result === 'string'
-                            ? parsed.result
-                            : JSON.stringify(parsed.result, null, 2),
-                          status: parsed.error ? 'error' : 'completed',
-                        }
-                      : tc
-                  )
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantId
-                        ? { ...m, toolCalls: [...activeToolCalls] }
-                        : m
-                    )
-                  )
-                }
-              } catch (e) {
-                if (data) {
-                  fullContent += data
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantId
-                        ? { ...m, content: fullContent }
-                        : m
-                    )
-                  )
-                }
+      if (!response.ok) throw new Error(`Server error: ${response.status}`)
+      
+      const data = await response.json()
+      
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === assistantId
+            ? { 
+                ...m, 
+                content: data.response, 
+                toolCalls: data.tool_calls,
+                isStreaming: false 
               }
-            }
-          }
-        }
-      } else {
-        const data = await response.json()
-        const responseContent = data.response || data.content || data.message || JSON.stringify(data)
-        const rawToolCalls = data.tool_calls || data.toolCalls || []
-        
-        const finalToolCalls: ToolCall[] = rawToolCalls.map((tc: any) => ({
-          id: tc.id || `tool_${Math.random().toString(36).slice(2)}`,
-          name: tc.name || tc.function?.name || 'unknown_tool',
-          arguments: typeof tc.arguments === 'string'
-            ? tc.arguments
-            : JSON.stringify(tc.arguments || tc.function?.arguments, null, 2),
-          result: tc.result ? (typeof tc.result === 'string' ? tc.result : JSON.stringify(tc.result, null, 2)) : undefined,
-          status: tc.result ? 'completed' : 'pending',
-        }))
+            : m
+        )
+      )
+      
+      // Refresh session list to show new chat
+      fetchSessions()
 
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === assistantId
-              ? { ...m, content: responseContent, toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined }
-              : m
-          )
-        )
-      }
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === assistantId
-              ? { ...m, content: m.content || '(cancelled)', isStreaming: false }
-              : m
-          )
-        )
-      } else {
+      if (err.name !== 'AbortError') {
         setMessages(prev =>
           prev.map(m =>
             m.id === assistantId
               ? {
                   ...m,
-                  content: `\u26a0\ufe0f Connection error: ${err.message}. The agent endpoint may be unavailable.`,
+                  content: `\u26a0\ufe0f Error: ${err.message}`,
                   isStreaming: false,
                 }
               : m
@@ -210,15 +165,10 @@ export function useAgentChat() {
         )
       }
     } finally {
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === assistantId ? { ...m, isStreaming: false } : m
-        )
-      )
       setIsLoading(false)
       abortRef.current = null
     }
-  }, [messages, isLoading])
+  }, [messages, isLoading, currentSessionId, fetchSessions])
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort()
@@ -228,10 +178,18 @@ export function useAgentChat() {
     setMessages([])
   }, [])
 
+  useEffect(() => {
+    fetchSessions()
+  }, [fetchSessions])
+
   return {
     messages,
+    sessions,
+    currentSessionId,
     isLoading,
     sendMessage,
+    loadSession,
+    startNewChat,
     stopGeneration,
     clearMessages,
   }

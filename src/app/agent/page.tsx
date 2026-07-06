@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 import ChatInterface from '@/components/agent/ChatInterface'
 import MemoryPanel from '@/components/agent/MemoryPanel'
-import { motion, AnimatePresence } from 'framer-motion'
+import ChatSidebar from '@/components/agent/ChatSidebar'
+import { useAgentChat } from '@/hooks/useAgentChat'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -27,10 +28,11 @@ function cn(...inputs: ClassValue[]) {
 export default function AgentPage() {
   const [activeTab, setActiveAgent] = useState('Chat')
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const { sessions, currentSessionId, loadSession, startNewChat } = useAgentChat()
 
   return (
     <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
-      {/* Sidebar - Far Left */}
+      {/* Sidebar - Far Left (App Navigation) */}
       <div className="w-[60px] flex-shrink-0 flex flex-col items-center py-4 border-r border-zinc-800 bg-zinc-950 z-30">
         <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 shadow-lg overflow-hidden">
           <img src="https://avatars.githubusercontent.com/u/100000000?v=4" alt="profile" className="w-full h-full object-cover opacity-80" />
@@ -47,6 +49,14 @@ export default function AgentPage() {
            <Settings className="w-5 h-5 cursor-pointer hover:text-zinc-500 transition-colors" />
         </div>
       </div>
+
+      {/* Chat History Sidebar */}
+      <ChatSidebar 
+        sessions={sessions} 
+        currentSessionId={currentSessionId} 
+        onSelectSession={loadSession} 
+        onNewChat={startNewChat}
+      />
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 relative">
@@ -91,7 +101,7 @@ export default function AgentPage() {
             </div>
             <div className="flex items-center gap-3 ml-2 border-l border-zinc-800 pl-4 text-zinc-500">
                <Bell className="w-4 h-4 cursor-pointer hover:text-zinc-300" />
-               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-700 flex items-center justify-center text-[10px] font-black cursor-pointer overflow-hidden shadow-inner">
+               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-700 flex items-center justify-center text-[10px] font-black cursor-pointer overflow-hidden shadow-inner shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                   <img src="https://avatars.githubusercontent.com/u/100000000?v=4" alt="user" className="w-full h-full object-cover" />
                </div>
             </div>
@@ -119,14 +129,6 @@ export default function AgentPage() {
         sidebarOpen ? "w-80 opacity-100" : "w-0 opacity-0 border-l-0"
       )}>
         <MemoryPanel />
-      </div>
-
-      {/* Setup Button (Floating Right) - Positioned relative to main content */}
-      <div className="absolute top-[68px] right-20 z-20 pointer-events-none">
-         <button className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-200">
-            <Settings className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Setup</span>
-         </button>
       </div>
     </div>
   )

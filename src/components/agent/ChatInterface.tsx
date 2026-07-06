@@ -396,7 +396,7 @@ export default function ChatInterface() {
             </form>
           </div>
           <p className="text-center text-[10px] text-zinc-700 font-bold uppercase tracking-[0.2em] mt-5">
-            Agent Instance • V0.2.1-SNAPSHOT • Phoenix, AZ
+            Agent Instance \u2022 V0.2.1-SNAPSHOT \u2022 Phoenix, AZ
           </p>
         </div>
       </div>
