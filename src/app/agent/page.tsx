@@ -1,5 +1,7 @@
 'use client'
 
+import PushNotificationManager from '@/components/agent/PushNotificationManager'
+
 import { useState } from 'react'
 import { 
   Plus, 
@@ -31,7 +33,9 @@ export default function AgentPage() {
   const { sessions, currentSessionId, loadSession, startNewChat } = useAgentChat()
 
   return (
-    <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <>
+      <PushNotificationManager />
+      <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
       {/* Sidebar - Far Left (App Navigation) */}
       <div className="w-[60px] flex-shrink-0 flex flex-col items-center py-4 border-r border-zinc-800 bg-zinc-950 z-30">
         <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 shadow-lg overflow-hidden">
@@ -131,5 +135,6 @@ export default function AgentPage() {
         <MemoryPanel />
       </div>
     </div>
+    </>
   )
 }
