@@ -14,7 +14,9 @@ import {
   Mic,
   Plus,
   MessageCircle,
-  X
+  X,
+  History,
+  LayoutGrid
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -85,7 +87,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn("flex flex-col w-full max-w-4xl mx-auto px-6 py-8 relative", 
+      className={cn("flex flex-col w-full max-w-4xl mx-auto px-6 py-6 relative", 
         isUser ? "items-end" : "items-start"
       )}
     >
@@ -98,19 +100,21 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         
         <div className={cn("flex-1 min-w-0", isUser ? "flex flex-col items-end" : "flex flex-col items-start")}>
           {isUser ? (
-             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3.5 shadow-sm max-w-[85%]">
-                <p className="text-[14px] text-zinc-200 leading-relaxed font-medium">{message.content}</p>
+             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 shadow-sm max-w-[90%]">
+                <p className="text-[15px] text-zinc-100 leading-relaxed font-medium">{message.content}</p>
              </div>
           ) : (
             <div className="w-full space-y-4">
               {message.toolCalls && message.toolCalls.length > 0 && (
                 <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer group">
-                   <span>Used {message.toolCalls.length} tools</span>
-                   <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                   <div className="flex items-center gap-1 bg-zinc-900/50 px-2.5 py-1 rounded-full border border-zinc-800/50">
+                      <span>Used {message.toolCalls.length} tools</span>
+                      <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                   </div>
                 </div>
               )}
 
-              <div className="prose prose-invert prose-sm max-w-none text-zinc-300 leading-[1.7] text-[15px]">
+              <div className="prose prose-invert prose-zinc max-w-none prose-sm leading-[1.8] text-[15px] text-zinc-300">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -127,25 +131,32 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                         </code>
                       )
                     },
-                    p: ({ children }) => <p className="mb-5 last:mb-0">{children}</p>,
-                    ul: ({ children }) => <ul className="list-disc pl-5 mb-5 space-y-2">{children}</ul>,
-                    ol: ({ children }) => <ol className="list-decimal pl-5 mb-5 space-y-2">{children}</ol>,
+                    p: ({ children }) => <p className="mb-6 last:mb-0">{children}</p>,
+                    ul: ({ children }) => <ul className="list-disc pl-5 mb-6 space-y-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal pl-5 mb-6 space-y-2">{children}</ol>,
                     li: ({ children }) => <li className="mb-0">{children}</li>,
-                    h1: ({ children }) => <h1 className="text-xl font-bold mb-5 mt-8 text-white">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-lg font-bold mb-4 mt-7 text-white">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-md font-bold mb-3 mt-6 text-white">{children}</h3>,
+                    h1: ({ children }) => <h1 className="text-2xl font-bold mb-6 mt-10 text-white tracking-tight">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xl font-bold mb-5 mt-8 text-white tracking-tight">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-bold mb-4 mt-6 text-white tracking-tight">{children}</h3>,
                     blockquote: ({ children }) => (
-                      <blockquote className="border-l-2 border-cyan-400/50 pl-5 italic text-zinc-400 my-6 bg-cyan-400/5 py-4 rounded-r-lg">
+                      <blockquote className="border-l-2 border-cyan-400/50 pl-6 italic text-zinc-400 my-8 bg-cyan-400/5 py-5 rounded-r-xl">
                         {children}
                       </blockquote>
                     ),
+                    table: ({ children }) => (
+                       <div className="my-8 overflow-x-auto border border-zinc-800 rounded-xl bg-zinc-900/20">
+                          <table className="min-w-full divide-y divide-zinc-800">{children}</table>
+                       </div>
+                    ),
+                    th: ({ children }) => <th className="px-5 py-3 bg-zinc-900/50 text-left text-[11px] font-black uppercase tracking-widest text-zinc-500">{children}</th>,
+                    td: ({ children }) => <td className="px-5 py-3 text-[13px] border-t border-zinc-800/50">{children}</td>,
                   }}
                 >
                   {message.content}
                 </ReactMarkdown>
                 
                 {message.isStreaming && !message.content && (
-                   <div className="flex gap-1.5 items-center py-2">
+                   <div className="flex gap-2 items-center py-2">
                       <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -215,12 +226,11 @@ export default function ChatInterface() {
     setInput(e.target.value)
     const el = e.target
     el.style.height = 'auto'
-    el.style.height = Math.min(el.scrollHeight, 240) + 'px'
+    el.style.height = Math.min(el.scrollHeight, 320) + 'px'
   }
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 bg-dot-grid relative">
-      {/* Date Separators would go here - for now just the list */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
@@ -228,21 +238,19 @@ export default function ChatInterface() {
       >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center min-h-[60%] text-center px-4">
-             <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-6">
-                <Bot className="w-8 h-8 text-zinc-600" />
+             <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-8 shadow-2xl">
+                <Bot className="w-10 h-10 text-zinc-700" />
              </div>
-             <h2 className="text-2xl font-black tracking-tight text-white mb-2">Initialize Vibe Logic</h2>
-             <p className="text-zinc-500 text-sm font-medium">Ready to orchestrate your workflow.</p>
+             <h2 className="text-3xl font-black tracking-tighter text-white mb-3">Vibe Platform Alpha</h2>
+             <p className="text-zinc-500 text-sm font-medium max-w-sm leading-relaxed">
+               Your private agent is authenticated and ready to orchestrate your workflow with Groq speed.
+             </p>
           </div>
         )}
 
-        <div className="w-full pb-60">
-          <div className="flex justify-center my-8">
-             <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest px-3 py-1 bg-zinc-900/50 rounded-full border border-zinc-800/30">Yesterday</span>
-          </div>
-          
-          <div className="flex justify-center my-8">
-             <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest px-3 py-1 bg-zinc-900/50 rounded-full border border-zinc-800/30">Today</span>
+        <div className="w-full pb-80">
+          <div className="flex justify-center my-10">
+             <span className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.3em] px-4 py-1.5 bg-zinc-900/40 rounded-full border border-zinc-800/30 backdrop-blur-sm">System Ready</span>
           </div>
 
           {messages.map(msg => (
@@ -257,7 +265,7 @@ export default function ChatInterface() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={scrollToBottom}
-              className="fixed bottom-[180px] left-1/2 -translate-x-1/2 p-2.5 bg-zinc-900 border border-zinc-800 rounded-full shadow-2xl hover:bg-zinc-800 transition-all z-20 text-zinc-100"
+              className="fixed bottom-[200px] left-1/2 -translate-x-1/2 p-3 bg-zinc-900 border border-zinc-800 rounded-full shadow-2xl hover:bg-zinc-800 transition-all z-20 text-zinc-100 ring-4 ring-black/20"
             >
               <ArrowDown className="w-4 h-4" />
             </motion.button>
@@ -265,52 +273,53 @@ export default function ChatInterface() {
         </AnimatePresence>
       </div>
 
-      {/* Floating Input Area */}
-      <div className="absolute bottom-8 left-0 right-0 px-6 z-30 pointer-events-none">
+      {/* Floating Input Area - Exactly like Wingman */}
+      <div className="absolute bottom-10 left-0 right-0 px-8 z-30 pointer-events-none">
         <div className="max-w-[840px] mx-auto pointer-events-auto">
           {/* Action Row */}
-          <div className="flex items-center gap-3 mb-4 overflow-x-auto no-scrollbar pb-1">
+          <div className="flex items-center gap-2.5 mb-5 overflow-x-auto no-scrollbar pb-1 px-2">
              {[
-               { icon: <Plus className="w-3.5 h-3.5" />, label: 'Connect Calendar and block focus time' },
-               { icon: <Flame className="w-3.5 h-3.5 text-orange-500" />, label: 'Remind me of birthdays and anniversaries' },
-               { icon: <Calendar className="w-3.5 h-3.5" />, label: 'Tell me if my calendar changes' },
+               { icon: <History className="w-3.5 h-3.5" />, label: "Check Ian's sports schedule" },
+               { icon: <Bot className="w-3.5 h-3.5" />, label: "Draft email about PBCoach app" },
+               { icon: <Calendar className="w-3.5 h-3.5" />, label: "What is my agenda for today?" },
+               { icon: <LayoutGrid className="w-3.5 h-3.5" />, label: "Summarize my recent GitHub PRs" },
              ].map((s, i) => (
                <button
                  key={i}
                  onClick={() => sendMessage(s.label)}
-                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800 transition-all shadow-sm"
+                 className="flex-shrink-0 flex items-center gap-2.5 px-4 py-2 rounded-full bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-600 hover:bg-zinc-800 transition-all backdrop-blur-md shadow-sm"
                >
-                 <span className="opacity-60">{s.icon}</span>
-                 <span className="text-[11px] font-bold text-zinc-400 whitespace-nowrap">{s.label}</span>
+                 <span className="text-zinc-500">{s.icon}</span>
+                 <span className="text-[11px] font-bold text-zinc-400 whitespace-nowrap tracking-tight">{s.label}</span>
                </button>
              ))}
           </div>
 
           {/* Main Input Box */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-[28px] shadow-2xl overflow-hidden focus-within:border-zinc-700 transition-all">
+          <div className="bg-zinc-900/95 border border-zinc-800 rounded-[32px] shadow-2xl overflow-hidden focus-within:border-zinc-700 transition-all backdrop-blur-xl ring-1 ring-white/5">
             {/* Top Banner */}
-            <div className="flex items-center justify-between px-5 py-2.5 bg-gradient-to-r from-indigo-900/40 via-cyan-900/20 to-zinc-900 border-b border-zinc-800/50">
-               <div className="flex items-center gap-2.5">
-                  <div className="flex -space-x-1">
-                    <div className="w-4 h-4 rounded-full bg-zinc-100 flex items-center justify-center border border-white shadow-sm">
-                       <span className="text-[8px] font-bold text-black italic">X</span>
+            <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-indigo-900/30 via-cyan-900/10 to-zinc-900 border-b border-zinc-800/50">
+               <div className="flex items-center gap-3">
+                  <div className="flex -space-x-1.5">
+                    <div className="w-4.5 h-4.5 rounded-full bg-zinc-100 flex items-center justify-center border-2 border-zinc-900 shadow-lg">
+                       <span className="text-[9px] font-black text-black italic">X</span>
                     </div>
-                    <div className="w-4 h-4 rounded-full bg-cyan-400 border border-white shadow-sm" />
-                    <div className="w-4 h-4 rounded-full bg-zinc-800 flex items-center justify-center border border-white shadow-sm">
-                       <span className="text-[8px] font-bold text-white tracking-tighter">228</span>
+                    <div className="w-4.5 h-4.5 rounded-full bg-cyan-400 border-2 border-zinc-900 shadow-lg" />
+                    <div className="w-4.5 h-4.5 rounded-full bg-zinc-800 flex items-center justify-center border-2 border-zinc-900 shadow-lg">
+                       <span className="text-[9px] font-black text-white tracking-tighter">231</span>
                     </div>
                   </div>
-                  <span className="text-[11px] font-black text-white/90 tracking-tight italic">Let Wingman run apps for you</span>
+                  <span className="text-[11px] font-black text-zinc-100 tracking-tight italic opacity-90">Let Wingman run apps for you</span>
                </div>
-               <div className="flex items-center gap-3">
-                  <button className="px-3.5 py-1 rounded-full bg-zinc-100 text-black text-[10px] font-black uppercase tracking-wider hover:bg-white transition-colors">Connect</button>
-                  <X className="w-3.5 h-3.5 text-zinc-600 cursor-pointer" />
+               <div className="flex items-center gap-4">
+                  <button className="px-4 py-1.5 rounded-full bg-zinc-100 text-black text-[10px] font-black uppercase tracking-[0.1em] hover:bg-white transition-all transform active:scale-95 shadow-md">Connect</button>
+                  <X className="w-4 h-4 text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors" />
                </div>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="p-2 pt-4">
-               <div className="px-4 pb-2">
+            <form onSubmit={handleSubmit} className="p-3 pt-4">
+               <div className="px-5 pb-3">
                   <textarea
                     ref={inputRef}
                     value={input}
@@ -319,23 +328,23 @@ export default function ChatInterface() {
                     placeholder="Reply to Atlas"
                     disabled={isLoading}
                     rows={1}
-                    className="w-full bg-transparent text-[15px] text-white placeholder:text-zinc-600 outline-none resize-none font-medium leading-relaxed"
-                    style={{ minHeight: '32px', maxHeight: '240px' }}
+                    className="w-full bg-transparent text-[16px] text-zinc-50 placeholder:text-zinc-600 outline-none resize-none font-medium leading-relaxed"
+                    style={{ minHeight: '36px', maxHeight: '320px' }}
                   />
                </div>
                
-               <div className="flex items-center justify-between px-2 pb-2">
-                  <div className="flex items-center gap-1">
-                    <button type="button" className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-full transition-all">
+               <div className="flex items-center justify-between px-3 pb-3">
+                  <div className="flex items-center gap-1.5">
+                    <button type="button" className="p-2.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-full transition-all">
                        <Plus className="w-5 h-5" />
                     </button>
-                    <button type="button" className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-full transition-all">
+                    <button type="button" className="p-2.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-full transition-all">
                        <Calendar className="w-5 h-5" />
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button type="button" className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-full transition-all">
+                  <div className="flex items-center gap-3">
+                    <button type="button" className="p-2.5 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-full transition-all">
                        <Mic className="w-5 h-5" />
                     </button>
                     
@@ -343,33 +352,36 @@ export default function ChatInterface() {
                       <button
                         type="button"
                         onClick={stopGeneration}
-                        className="w-10 h-10 bg-zinc-100 text-black rounded-full hover:bg-white flex items-center justify-center transition-all shadow-lg"
+                        className="w-11 h-11 bg-zinc-50 text-black rounded-full hover:bg-white flex items-center justify-center transition-all shadow-xl scale-105"
                       >
-                        <Square className="w-4 h-4 fill-current" />
+                        <Square className="w-4.5 h-4.5 fill-current" />
                       </button>
                     ) : (
                       <button
                         type="submit"
                         disabled={!input.trim()}
-                        className="w-10 h-10 bg-zinc-800 text-zinc-400 rounded-full border border-zinc-700 hover:bg-zinc-700 hover:text-white flex items-center justify-center transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                        className="w-11 h-11 bg-zinc-800 text-zinc-500 rounded-full border border-zinc-700 hover:border-zinc-500 hover:text-white flex items-center justify-center transition-all disabled:opacity-20 disabled:cursor-not-allowed group"
                       >
-                        <Send className="w-4 h-4 translate-x-0.5 -translate-y-0.5" />
+                        <Send className="w-5 h-5 group-hover:scale-110 transition-transform" />
                       </button>
                     )}
                   </div>
                </div>
             </form>
           </div>
+          <p className="text-center text-[10px] text-zinc-700 font-bold uppercase tracking-[0.2em] mt-5">
+            Agent Instance • V0.2.1-SNAPSHOT • Phoenix, AZ
+          </p>
         </div>
       </div>
 
-      {/* Floating Chat Widget Icon (Bottom Right) */}
-      <div className="fixed bottom-6 right-6 z-40">
-         <div className="relative group cursor-pointer transition-transform active:scale-95">
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-2xl border border-zinc-200">
-               <MessageCircle className="w-6 h-6 text-black" />
+      {/* Floating Chat Widget Icon */}
+      <div className="fixed bottom-8 right-8 z-40 hidden md:block">
+         <div className="relative group cursor-pointer transition-all hover:scale-110 active:scale-95">
+            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-2xl border border-zinc-200">
+               <MessageCircle className="w-7 h-7 text-black" />
             </div>
-            <div className="absolute -top-1 -right-1 w-5 h-5 bg-black border border-white text-white rounded-full flex items-center justify-center text-[10px] font-black">2</div>
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-black border-2 border-white text-white rounded-full flex items-center justify-center text-[11px] font-black shadow-lg">2</div>
          </div>
       </div>
     </div>

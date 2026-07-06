@@ -166,7 +166,7 @@ export function useAgentChat() {
         }
       } else {
         const data = await response.json()
-        const content = data.response || data.content || data.message || JSON.stringify(data)
+        const responseContent = data.response || data.content || data.message || JSON.stringify(data)
         const rawToolCalls = data.tool_calls || data.toolCalls || []
         
         const finalToolCalls: ToolCall[] = rawToolCalls.map((tc: any) => ({
@@ -182,7 +182,7 @@ export function useAgentChat() {
         setMessages(prev =>
           prev.map(m =>
             m.id === assistantId
-              ? { ...m, content, toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined }
+              ? { ...m, content: responseContent, toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined }
               : m
           )
         )

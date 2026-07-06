@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Brain, RefreshCw, ChevronRight, ChevronDown, Database, Hash, Clock } from 'lucide-react'
+import { Brain, RefreshCw, ChevronRight, ChevronDown, Database, Hash, Clock, LoaderCircle } from 'lucide-react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -51,10 +51,11 @@ export default function MemoryPanel() {
 
       setFacts(factList)
     } catch (err: any) {
+      console.error("Memory fetch error:", err)
       setError(err.message)
       setFacts([])
     } finally {
-      setLoading(false)
+      setTimeout(() => setLoading(false), 300)
     }
   }
 
@@ -74,96 +75,92 @@ export default function MemoryPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-vibe-bg border-l border-vibe-border select-none">
+    <div className="flex flex-col h-full bg-zinc-950 border-l border-zinc-800 select-none w-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-vibe-border bg-vibe-surface/30">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-vibe-purple/10 flex items-center justify-center">
-            <Brain className="w-4 h-4 text-vibe-purple" />
+      <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800 bg-zinc-900/20">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+            <Brain className="w-4.5 h-4.5 text-indigo-400" />
           </div>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-vibe-text">
-            Durable Memory
+          <span className="text-[12px] font-black uppercase tracking-[0.15em] text-zinc-100">
+            Memory
           </span>
         </div>
         <button
           onClick={fetchMemory}
           disabled={loading}
-          className="p-1.5 hover:bg-vibe-border rounded-md transition-colors text-vibe-muted hover:text-vibe-accent disabled:opacity-50"
+          className="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-cyan-400 disabled:opacity-50"
         >
-          <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+          <RefreshCw className={cn("w-4 h-4", loading && "animate-spin text-cyan-400")} />
         </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-8 no-scrollbar">
         {loading && facts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <LoaderCircle className="w-6 h-6 text-vibe-muted animate-spin" />
-            <span className="text-[10px] text-vibe-muted font-bold uppercase tracking-tighter">Updating state...</span>
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <LoaderCircle className="w-8 h-8 text-indigo-500 animate-spin opacity-50" />
+            <span className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.2em]">Updating Neural State</span>
           </div>
         )}
 
         {error && (
-          <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
-            <p className="text-xs text-red-500/90 leading-relaxed font-medium">Remote error: {error}</p>
+          <div className="p-5 rounded-2xl bg-red-500/5 border border-red-500/10">
+            <p className="text-xs text-red-400 font-bold mb-1 uppercase tracking-wider">Sync Error</p>
+            <p className="text-[13px] text-zinc-500 leading-relaxed">{error}</p>
             <button
               onClick={fetchMemory}
-              className="mt-3 text-[10px] font-bold text-vibe-accent uppercase tracking-wider hover:underline"
+              className="mt-4 text-[10px] font-black text-cyan-400 uppercase tracking-widest hover:text-white transition-colors"
             >
-              Try Reconnect
+              Retry Connection
             </button>
           </div>
         )}
 
         {!loading && !error && facts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
-            <Database className="w-8 h-8 text-vibe-muted mb-3" />
-            <p className="text-[11px] font-medium text-vibe-muted">No persistent data found</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center opacity-30">
+            <Database className="w-10 h-10 text-zinc-600 mb-4" />
+            <p className="text-xs font-black uppercase tracking-widest text-zinc-500">No context stored</p>
           </div>
         )}
 
         {categories.map(category => (
-          <div key={category} className="space-y-2">
+          <div key={category} className="space-y-4">
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center gap-2 w-full text-left group"
+              className="flex items-center gap-3 w-full text-left group"
             >
               <div className="flex items-center gap-2">
-                {expandedCategories.has(category) ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-vibe-muted transition-transform" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-vibe-muted transition-transform" />
-                )}
-                <span className="text-[10px] uppercase tracking-[0.15em] text-vibe-muted font-black group-hover:text-vibe-text">
+                <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-black group-hover:text-zinc-100 transition-colors">
                   {category}
                 </span>
               </div>
-              <div className="h-px flex-1 bg-vibe-border/50 ml-2" />
-              <span className="text-[10px] text-vibe-muted/50 font-mono">
+              <div className="h-px flex-1 bg-zinc-800/80" />
+              <span className="text-[10px] text-zinc-600 font-mono font-bold">
                 {facts.filter(f => (f.category || 'general') === category).length}
               </span>
             </button>
 
             {expandedCategories.has(category) && (
-              <div className="space-y-2.5 pt-1">
+              <div className="space-y-3">
                 {facts
                   .filter(f => (f.category || 'general') === category)
                   .map((fact, i) => (
                     <div
                       key={fact.id || i}
-                      className="group p-3.5 rounded-xl bg-vibe-surface/40 border border-vibe-border/50 hover:border-vibe-accent/30 transition-all shadow-sm"
+                      className="group p-4 rounded-2xl bg-zinc-900/40 border border-zinc-800/50 hover:border-indigo-500/30 hover:bg-zinc-900/60 transition-all shadow-sm"
                     >
-                      <div className="flex items-start gap-3">
-                         <Hash className="w-3 h-3 text-vibe-accent mt-0.5 opacity-40 group-hover:opacity-100 transition-opacity" />
-                         <p className="text-[11px] text-vibe-text/80 leading-relaxed font-medium">
+                      <div className="flex items-start gap-4">
+                         <Hash className="w-3.5 h-3.5 text-indigo-400 mt-0.5 opacity-30 group-hover:opacity-100 transition-opacity" />
+                         <p className="text-[13px] text-zinc-400 group-hover:text-zinc-200 leading-relaxed font-medium transition-colors">
                           {fact.content}
                         </p>
                       </div>
                       
                       {fact.timestamp && (
-                        <div className="flex items-center gap-1.5 mt-2.5 opacity-30 group-hover:opacity-100 transition-opacity">
-                          <Clock className="w-2.5 h-2.5 text-vibe-muted" />
-                          <span className="text-[9px] text-vibe-muted font-bold tracking-tighter">
+                        <div className="flex items-center gap-2 mt-3 opacity-20 group-hover:opacity-100 transition-opacity">
+                          <Clock className="w-3 h-3 text-zinc-500" />
+                          <span className="text-[10px] text-zinc-500 font-black uppercase tracking-tighter">
                             {new Date(fact.timestamp).toLocaleDateString()}
                           </span>
                         </div>
@@ -177,34 +174,14 @@ export default function MemoryPanel() {
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-vibe-border bg-vibe-surface/20">
+      <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900/10">
         <div className="flex items-center justify-between">
-           <div className="flex items-center gap-2">
-             <div className="w-1.5 h-1.5 rounded-full bg-vibe-accent" />
-             <span className="text-[9px] font-bold text-vibe-muted uppercase tracking-tighter">Remote Sync</span>
+           <div className="flex items-center gap-2.5">
+             <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+             <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Neural Sync active</span>
            </div>
-           <span className="text-[9px] font-mono text-vibe-muted/40">V0.2.1-SNAPSHOT</span>
         </div>
       </div>
     </div>
-  )
-}
-
-function LoaderCircle(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-    </svg>
   )
 }
