@@ -40,7 +40,8 @@ export function useAgentChat() {
       timestamp: new Date(),
     }
 
-    setMessages(prev => [...prev, userMessage])
+    const currentMessages = [...messages, userMessage]
+    setMessages(currentMessages)
     setIsLoading(true)
 
     const assistantId = generateId()
@@ -63,7 +64,10 @@ export function useAgentChat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: content.trim(),
-          history: messages.map(m => ({ role: m.role, content: m.content })),
+          history: currentMessages.slice(0, -1).map(m => ({ 
+            role: m.role, 
+            content: m.content 
+          })),
         }),
         signal: abortRef.current.signal,
       })
@@ -80,7 +84,7 @@ export function useAgentChat() {
 
         if (reader) {
           let fullContent = ''
-          let toolCalls: ToolCall[] = []
+          let activeToolCalls: ToolCall[] = []
 
           while (true) {
             const { done, value } = await reader.read()
@@ -90,60 +94,63 @@ export function useAgentChat() {
             const lines = chunk.split('\n')
 
             for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6)
-                if (data === '[DONE]') break
+              const cleanLine = line.trim()
+              if (!cleanLine.startsWith('data: ')) continue
+              
+              const data = cleanLine.slice(6)
+              if (data === '[DONE]') break
 
-                try {
-                  const parsed = JSON.parse(data)
+              try {
+                const parsed = JSON.parse(data)
 
-                  if (parsed.type === 'content' || parsed.type === 'text') {
-                    fullContent += parsed.content || parsed.text || ''
-                    setMessages(prev =>
-                      prev.map(m =>
-                        m.id === assistantId
-                          ? { ...m, content: fullContent }
-                          : m
-                      )
+                if (parsed.type === 'content' || parsed.type === 'text' || parsed.content) {
+                  fullContent += parsed.content || parsed.text || ''
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantId
+                        ? { ...m, content: fullContent }
+                        : m
                     )
-                  } else if (parsed.type === 'tool_call') {
-                    const toolCall: ToolCall = {
-                      id: parsed.id || generateId(),
-                      name: parsed.name || parsed.tool,
-                      arguments: typeof parsed.arguments === 'string'
-                        ? parsed.arguments
-                        : JSON.stringify(parsed.arguments, null, 2),
-                      status: 'running',
-                    }
-                    toolCalls = [...toolCalls, toolCall]
-                    setMessages(prev =>
-                      prev.map(m =>
-                        m.id === assistantId
-                          ? { ...m, toolCalls: [...toolCalls] }
-                          : m
-                      )
-                    )
-                  } else if (parsed.type === 'tool_result') {
-                    toolCalls = toolCalls.map(tc =>
-                      tc.id === parsed.id || tc.name === parsed.name
-                        ? {
-                            ...tc,
-                            result: typeof parsed.result === 'string'
-                              ? parsed.result
-                              : JSON.stringify(parsed.result, null, 2),
-                            status: parsed.error ? 'error' : 'completed',
-                          }
-                        : tc
-                    )
-                    setMessages(prev =>
-                      prev.map(m =>
-                        m.id === assistantId
-                          ? { ...m, toolCalls: [...toolCalls] }
-                          : m
-                      )
-                    )
+                  )
+                } else if (parsed.type === 'tool_call') {
+                  const newToolCall: ToolCall = {
+                    id: parsed.id || `tool_${Date.now()}`,
+                    name: parsed.name || parsed.tool,
+                    arguments: typeof parsed.arguments === 'string'
+                      ? parsed.arguments
+                      : JSON.stringify(parsed.arguments, null, 2),
+                    status: 'running',
                   }
-                } catch {
+                  activeToolCalls = [...activeToolCalls, newToolCall]
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantId
+                        ? { ...m, toolCalls: [...activeToolCalls] }
+                        : m
+                    )
+                  )
+                } else if (parsed.type === 'tool_result') {
+                  activeToolCalls = activeToolCalls.map(tc =>
+                    tc.id === parsed.id || tc.name === parsed.name
+                      ? {
+                          ...tc,
+                          result: typeof parsed.result === 'string'
+                            ? parsed.result
+                            : JSON.stringify(parsed.result, null, 2),
+                          status: parsed.error ? 'error' : 'completed',
+                        }
+                      : tc
+                  )
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === assistantId
+                        ? { ...m, toolCalls: [...activeToolCalls] }
+                        : m
+                    )
+                  )
+                }
+              } catch (e) {
+                if (data) {
                   fullContent += data
                   setMessages(prev =>
                     prev.map(m =>
@@ -159,10 +166,12 @@ export function useAgentChat() {
         }
       } else {
         const data = await response.json()
-        const content = data.content || data.message || data.response || JSON.stringify(data)
-        const toolCalls: ToolCall[] = (data.tool_calls || data.toolCalls || []).map((tc: any) => ({
-          id: tc.id || generateId(),
-          name: tc.name || tc.function?.name,
+        const content = data.response || data.content || data.message || JSON.stringify(data)
+        const rawToolCalls = data.tool_calls || data.toolCalls || []
+        
+        const finalToolCalls: ToolCall[] = rawToolCalls.map((tc: any) => ({
+          id: tc.id || `tool_${Math.random().toString(36).slice(2)}`,
+          name: tc.name || tc.function?.name || 'unknown_tool',
           arguments: typeof tc.arguments === 'string'
             ? tc.arguments
             : JSON.stringify(tc.arguments || tc.function?.arguments, null, 2),
@@ -173,7 +182,7 @@ export function useAgentChat() {
         setMessages(prev =>
           prev.map(m =>
             m.id === assistantId
-              ? { ...m, content, toolCalls: toolCalls.length > 0 ? toolCalls : undefined }
+              ? { ...m, content, toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined }
               : m
           )
         )

@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Brain, RefreshCw, ChevronRight, ChevronDown, Database } from 'lucide-react'
+import { Brain, RefreshCw, ChevronRight, ChevronDown, Database, Hash, Clock } from 'lucide-react'
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 const AGENT_URL = 'https://agent.coolgeek.me'
 
@@ -27,23 +33,23 @@ export default function MemoryPanel() {
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
       const data = await res.json()
 
+      let factList: MemoryFact[] = []
       if (Array.isArray(data)) {
-        setFacts(data.map((item: any) => ({
+        factList = data.map((item: any) => ({
           id: item.id || item.key || Math.random().toString(36).slice(2),
           content: item.content || item.fact || item.text || (typeof item === 'string' ? item : JSON.stringify(item)),
           category: item.category || item.type || 'general',
           timestamp: item.timestamp || item.created_at,
-        })))
+        }))
       } else if (data.facts) {
-        setFacts(data.facts.map((item: any) => ({
-          id: item.id || Math.random().toString(36).slice(2),
-          content: item.content || item.fact || item.text || JSON.stringify(item),
-          category: item.category || 'general',
-          timestamp: item.timestamp,
-        })))
-      } else {
-        setFacts([{ content: JSON.stringify(data, null, 2), category: 'raw' }])
+        factList = Object.entries(data.facts).map(([key, value]: [string, any]) => ({
+          id: key,
+          content: typeof value === 'string' ? value : JSON.stringify(value),
+          category: 'facts',
+        }))
       }
+
+      setFacts(factList)
     } catch (err: any) {
       setError(err.message)
       setFacts([])
@@ -68,88 +74,99 @@ export default function MemoryPanel() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-vibe-surface border-l border-vibe-border">
+    <div className="flex flex-col h-full bg-vibe-bg border-l border-vibe-border select-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-vibe-border">
-        <div className="flex items-center gap-2">
-          <Brain className="w-4 h-4 text-vibe-purple" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-vibe-text/80">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-vibe-border bg-vibe-surface/30">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-vibe-purple/10 flex items-center justify-center">
+            <Brain className="w-4 h-4 text-vibe-purple" />
+          </div>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-vibe-text">
             Durable Memory
           </span>
         </div>
         <button
           onClick={fetchMemory}
           disabled={loading}
-          className="p-1.5 hover:bg-vibe-border rounded transition-colors text-vibe-muted hover:text-vibe-accent disabled:opacity-50"
-          title="Refresh memory"
+          className="p-1.5 hover:bg-vibe-border rounded-md transition-colors text-vibe-muted hover:text-vibe-accent disabled:opacity-50"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
         </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-3 py-2">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
         {loading && facts.length === 0 && (
-          <div className="flex items-center gap-2 py-4 justify-center">
-            <RefreshCw className="w-4 h-4 text-vibe-muted animate-spin" />
-            <span className="text-xs text-vibe-muted">Loading memory...</span>
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <LoaderCircle className="w-6 h-6 text-vibe-muted animate-spin" />
+            <span className="text-[10px] text-vibe-muted font-bold uppercase tracking-tighter">Updating state...</span>
           </div>
         )}
 
         {error && (
-          <div className="p-3 rounded-lg bg-red-400/10 border border-red-400/20 mt-2">
-            <p className="text-xs text-red-400">Failed to load: {error}</p>
+          <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+            <p className="text-xs text-red-500/90 leading-relaxed font-medium">Remote error: {error}</p>
             <button
               onClick={fetchMemory}
-              className="mt-2 text-[10px] text-vibe-accent hover:underline"
+              className="mt-3 text-[10px] font-bold text-vibe-accent uppercase tracking-wider hover:underline"
             >
-              Retry
+              Try Reconnect
             </button>
           </div>
         )}
 
         {!loading && !error && facts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Database className="w-8 h-8 text-vibe-muted/50 mb-2" />
-            <p className="text-xs text-vibe-muted">No memory facts found</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+            <Database className="w-8 h-8 text-vibe-muted mb-3" />
+            <p className="text-[11px] font-medium text-vibe-muted">No persistent data found</p>
           </div>
         )}
 
         {categories.map(category => (
-          <div key={category} className="mb-2">
+          <div key={category} className="space-y-2">
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center gap-1.5 w-full px-1 py-1.5 text-left hover:bg-vibe-border/30 rounded transition-colors"
+              className="flex items-center gap-2 w-full text-left group"
             >
-              {expandedCategories.has(category) ? (
-                <ChevronDown className="w-3 h-3 text-vibe-muted" />
-              ) : (
-                <ChevronRight className="w-3 h-3 text-vibe-muted" />
-              )}
-              <span className="text-[10px] uppercase tracking-wider text-vibe-muted font-bold">
-                {category}
-              </span>
-              <span className="ml-auto text-[10px] text-vibe-muted/60">
+              <div className="flex items-center gap-2">
+                {expandedCategories.has(category) ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-vibe-muted transition-transform" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-vibe-muted transition-transform" />
+                )}
+                <span className="text-[10px] uppercase tracking-[0.15em] text-vibe-muted font-black group-hover:text-vibe-text">
+                  {category}
+                </span>
+              </div>
+              <div className="h-px flex-1 bg-vibe-border/50 ml-2" />
+              <span className="text-[10px] text-vibe-muted/50 font-mono">
                 {facts.filter(f => (f.category || 'general') === category).length}
               </span>
             </button>
 
             {expandedCategories.has(category) && (
-              <div className="ml-4 space-y-1 mt-1">
+              <div className="space-y-2.5 pt-1">
                 {facts
                   .filter(f => (f.category || 'general') === category)
                   .map((fact, i) => (
                     <div
                       key={fact.id || i}
-                      className="px-2.5 py-2 rounded-md bg-vibe-bg/60 border border-vibe-border/50 hover:border-vibe-purple/30 transition-colors"
+                      className="group p-3.5 rounded-xl bg-vibe-surface/40 border border-vibe-border/50 hover:border-vibe-accent/30 transition-all shadow-sm"
                     >
-                      <p className="text-[11px] text-vibe-text/80 leading-relaxed whitespace-pre-wrap break-words">
-                        {fact.content}
-                      </p>
-                      {fact.timestamp && (
-                        <p className="text-[9px] text-vibe-muted/50 mt-1">
-                          {new Date(fact.timestamp).toLocaleDateString()}
+                      <div className="flex items-start gap-3">
+                         <Hash className="w-3 h-3 text-vibe-accent mt-0.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                         <p className="text-[11px] text-vibe-text/80 leading-relaxed font-medium">
+                          {fact.content}
                         </p>
+                      </div>
+                      
+                      {fact.timestamp && (
+                        <div className="flex items-center gap-1.5 mt-2.5 opacity-30 group-hover:opacity-100 transition-opacity">
+                          <Clock className="w-2.5 h-2.5 text-vibe-muted" />
+                          <span className="text-[9px] text-vibe-muted font-bold tracking-tighter">
+                            {new Date(fact.timestamp).toLocaleDateString()}
+                          </span>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -160,12 +177,34 @@ export default function MemoryPanel() {
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-vibe-border">
-        <div className="flex items-center justify-between text-[10px] text-vibe-muted">
-          <span>{facts.length} facts stored</span>
-          <span className="text-vibe-purple">agent.coolgeek.me</span>
+      <div className="px-5 py-3 border-t border-vibe-border bg-vibe-surface/20">
+        <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2">
+             <div className="w-1.5 h-1.5 rounded-full bg-vibe-accent" />
+             <span className="text-[9px] font-bold text-vibe-muted uppercase tracking-tighter">Remote Sync</span>
+           </div>
+           <span className="text-[9px] font-mono text-vibe-muted/40">V0.2.1-SNAPSHOT</span>
         </div>
       </div>
     </div>
+  )
+}
+
+function LoaderCircle(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
   )
 }
